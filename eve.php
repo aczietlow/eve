@@ -1,11 +1,11 @@
 <?php
 /**
  * EVE API fetcher for character info
+ * @TODO: this is task
  */
 
 Class eveRequest {
 	//User date
-	public $name;
 	public $keyID;
 	public $vCode;
 	
@@ -15,6 +15,8 @@ Class eveRequest {
 	
 	//Returned response
 	public $data;
+	
+	private $cachedUntil;
 
 	/**
 	 * 
@@ -33,18 +35,32 @@ Class eveRequest {
 	 * @param array $fields fields to be passed via POST during http request
 	 */
 	public function get($fields = array()) {
-		$fields += array(
-      'keyID' => $this->keyID,
-      'vCode' => $this->vCode,
-    );	
-		$curl_handler = curl_init();
-		curl_setopt($curl_handler, CURLOPT_URL, $this->baseURI. $this->requestURI);
-		curl_setopt($curl_handler, CURLOPT_POST, 1);
-		curl_setopt($curl_handler, CURLOPT_POSTFIELDS, $fields);
-		curl_setopt($curl_handler, CURLOPT_RETURNTRANSFER, 1);
-		$this->data = new SimpleXMLElement(curl_exec($curl_handler));
-		print $this->data->cachedUntil;
-  }
+		if(time() >= $this->cachedUntil) {	
+			$fields += array(
+	      'keyID' => $this->keyID,
+	      'vCode' => $this->vCode,
+	    );	
+			$curl_handler = curl_init();
+			curl_setopt($curl_handler, CURLOPT_URL, $this->baseURI. $this->requestURI);
+			curl_setopt($curl_handler, CURLOPT_POST, 1);
+			curl_setopt($curl_handler, CURLOPT_POSTFIELDS, $fields);
+			curl_setopt($curl_handler, CURLOPT_RETURNTRANSFER, 1);
+			$this->data = new SimpleXMLElement(curl_exec($curl_handler));
+			$this->parseCommon();
+		}
+  	return $this;
+	}
+  
+	/**
+	 * 
+	 * EVE caches data. This is will set the cachedUtil flag to ensure that we 
+	 * do not query uneeded (cached) data
+	 */
+	private function parseCommon() {
+		if (!isset($this->data->error)) {
+			$this->cachedUntil = strtotime($this->data->cachedUntil);
+		}
+	}
   	
 	public function result($xpath = NULL) {
     if ($xpath) {
@@ -53,6 +69,10 @@ Class eveRequest {
     else {
       return $this->data;
     }
+  }
+  
+  public function debug() {
+  	print ($this->data->asXML());
   }
 }
 
@@ -85,21 +105,43 @@ Class eveAccount extends eveRequest {
 			$this->loadCharacters();
 		}
 	}
+	
+	/**
+	 * Returns character matching $name or NULL
+	 */
+	  public function getCharacterByName($name = NULL) {
+	    foreach ($this->characters as $char) {
+	      if ($name == $char['name']) {
+	        return $char;
+	      }
+	    }
+	    return NULL;
+	  }
+	  
+	/**
+	 * Returns characters matching $ID or NULL
+	 */
+	  public function getCharacterByID($ID = NULL) {
+	    return isset($this->characters[$ID]) ? $this->characters[$ID] : NULL;
+	  }
 }
 
+Class eveCharacter extends eveRequest {
+	
+}
 
 
 
 //constructed URL
 //https://api.eveonline.com/account/Characters.xml.aspx?keyID=1527953&vCode=ZRKK83eqEkCyvkZBcHrtn4KK87e76dt7z4vA8mRjJenE74HeGpS4RdhLc8cZU33K
-//https://api.eve-online.com/account/Characters.xml.aspx
+//https://api.eveonline.com/char/SkillInTraining.xml.aspx?keyID=1527953&vCode=ZRKK83eqEkCyvkZBcHrtn4KK87e76dt7z4vA8mRjJenE74HeGpS4RdhLc8cZU33K&characterID=92650498
+
 
 //test input
-$character1 = new eveAccount('1532444', 'zqYXo6MDfyomfjxBZPoAN3BU36jS2pefofDUpJRgFg6k9K3nwe8SSp2ON2WDoUMR');
+$eve = new eveAccount('1527953', 'ZRKK83eqEkCyvkZBcHrtn4KK87e76dt7z4vA8mRjJenE74HeGpS4RdhLc8cZU33K');
 
 
-
-$character1->getCharacters();
-$character1->name = 'christov'; 
-print $character1->baseURI. $character1->requestURI;
+$eve->getCharacters(); 
+$character = $eve->getCharacterByID(92650498);
+print_r ($christov);
 //print_r ($character1->data);
