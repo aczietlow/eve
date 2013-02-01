@@ -1,6 +1,6 @@
 <?php 
-require_once (dirname(__FILE__) . 'simpletest/autorun.php');
-
+require_once (dirname(__FILE__) . '/../simpletest/autorun.php');
+require_once ('/../classes/log.php' );
 class TestOfLogging extends UnitTestCase {
 	function testFirstLogMessageCreatesFileIfNonexistent() {
 		@unlink(dirname(__FILE__) . 'temp/test.log');
